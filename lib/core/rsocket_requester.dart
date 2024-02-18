@@ -24,17 +24,14 @@ abstract class Subscriber {
 
 class CompleterSubscriber implements Subscriber {
   Completer completer;
-  Payload? payload;
+  final List<Payload> payloads = [];
 
   CompleterSubscriber(this.completer);
 
   @override
   void onNext(Payload? payload) {
-    if (this.payload != null) {
-      this.payload?.metadata = (this.payload?.metadata ?? <int>[]) + (payload?.metadata ?? <int>[]) as Uint8List;
-      this.payload?.data = (this.payload?.data ?? <int>[]) + (payload?.data ?? <int>[]) as Uint8List;
-    } else {
-      this.payload = payload;
+    if (payload != null) {
+      this.payloads.add(payload);
     }
   }
 
@@ -45,6 +42,27 @@ class CompleterSubscriber implements Subscriber {
 
   @override
   void onComplete() {
+    final metadataSize = payloads.fold(0, (int a, p) => a + (p.metadata?.length ?? 0));
+    final dataSize = payloads.fold(0, (int a, p) => a + (p.data?.length ?? 0));
+    final metadata = Uint8List(metadataSize);
+    final data = Uint8List(dataSize);
+    var metadataStart = 0;
+    var dataStart = 0;
+    for (var payload in payloads) {
+      var metadataFragment = payload.metadata;
+      if (metadataFragment != null) {
+        final end = metadataStart + metadataFragment.length;
+        metadata.setRange(metadataStart, end, metadataFragment);
+        metadataStart = end;
+      }
+      var dataFragment = payload.data;
+      if (dataFragment != null) {
+        final end = dataStart + dataFragment.length;
+        data.setRange(dataStart, end, dataFragment);
+        dataStart = end;
+      }
+    }
+    final payload = Payload.from(metadata, data);
     completer.complete(payload);
   }
 }
