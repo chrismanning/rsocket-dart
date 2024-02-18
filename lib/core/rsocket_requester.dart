@@ -30,7 +30,12 @@ class CompleterSubscriber implements Subscriber {
 
   @override
   void onNext(Payload? payload) {
-    this.payload = payload;
+    if (this.payload != null) {
+      this.payload?.metadata = (this.payload?.metadata ?? <int>[]) + (payload?.metadata ?? <int>[]) as Uint8List;
+      this.payload?.data = (this.payload?.data ?? <int>[]) + (payload?.data ?? <int>[]) as Uint8List;
+    } else {
+      this.payload = payload;
+    }
   }
 
   @override
